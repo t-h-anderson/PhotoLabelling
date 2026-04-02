@@ -7,7 +7,7 @@ from PIL import Image, ImageFilter, ImageStat
 _client = ollama.Client(timeout=120)
 
 from pathlib import Path
-from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE, MAX_IMAGE_PX
+from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE, MAX_IMAGE_PX, SHARPNESS_BLUR_THRESHOLD
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
     update_vocabulary, build_prompt, scan_photos
@@ -81,8 +81,6 @@ def parse_response(raw: str) -> tuple[str, str, str, int]:
     return title, caption, keywords, model_rating
 
 def final_rating(model_rating: int, sharpness: float) -> int:
-    # cap the model's rating if the sharpness score suggests a blurry image
-    from config import SHARPNESS_BLUR_THRESHOLD
     if model_rating and sharpness < SHARPNESS_BLUR_THRESHOLD:
         return max(1, model_rating - 1)
     return model_rating
@@ -104,6 +102,8 @@ def run_pipeline():
                 title, caption, keywords, model_rating = parse_response(raw_description)
                 keywords = scrub_keywords(keywords, blacklist)
                 rating = final_rating(model_rating, metrics["sharpness"])
+                focus_tag = "blurry focus" if metrics["sharpness"] < SHARPNESS_BLUR_THRESHOLD else "sharp focus"
+                keywords = f"{keywords}, {focus_tag}" if keywords else focus_tag
 
                 record = {"path": photo.as_posix(), "title": title, "caption": caption, "keywords": keywords, "rating": rating}
                 out.write(json.dumps(record, ensure_ascii=False) + "\n")
