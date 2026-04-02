@@ -27,3 +27,9 @@ SHARPNESS_BLUR_THRESHOLD = 100
 # Number of vocabulary terms to include in the AI prompt.
 # Keep this low — smaller models treat long lists as things to copy, not hints.
 VOCABULARY_PROMPT_SIZE = 20
+
+# Ollama context window size (tokens). Ollama pre-allocates KV cache for the
+# full window upfront. Each photo needs ~3500 tokens (image ~2800 + prompt +
+# response), so 4096 is sufficient and saves several GB of VRAM vs the default
+# 32768.
+NUM_CTX = 4096

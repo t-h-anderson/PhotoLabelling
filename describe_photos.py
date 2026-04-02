@@ -7,7 +7,7 @@ from PIL import Image, ImageFilter, ImageStat
 _client = ollama.Client(timeout=120)
 
 from pathlib import Path
-from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE, MAX_IMAGE_PX, SHARPNESS_BLUR_THRESHOLD
+from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE, MAX_IMAGE_PX, SHARPNESS_BLUR_THRESHOLD, NUM_CTX
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
     update_vocabulary, build_prompt, scan_photos
@@ -44,6 +44,7 @@ def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
             "content": prompt,
             "images": [image_bytes],
         }],
+        options={"num_ctx": NUM_CTX},
     )
     wall_seconds = time.perf_counter() - wall_start
 
