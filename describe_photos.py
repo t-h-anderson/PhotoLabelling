@@ -96,6 +96,7 @@ def final_rating(model_rating: int, sharpness: float) -> int:
     return min(model_rating, max_stars) if model_rating else 0
 
 def run_pipeline():
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     processed = load_processed()
     photos = [p for p in scan_photos() if p.as_posix() not in processed]
     print(f"Found {len(photos)} unprocessed photos")
