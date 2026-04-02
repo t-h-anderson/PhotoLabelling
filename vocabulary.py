@@ -1,10 +1,13 @@
 import json
 from pathlib import Path
 from collections import Counter
-from config import OUTPUT_DIR
+from config import OUTPUT_DIR, PHOTO_DIR, EXTENSIONS
 
 VOCABULARY_FILE = OUTPUT_DIR / "vocabulary.json"
 BLACKLIST_FILE = OUTPUT_DIR / "blacklist.txt"
+
+def scan_photos() -> list[Path]:
+    return [p for p in PHOTO_DIR.rglob("*") if p.suffix.lower() in EXTENSIONS]
 
 def load_vocabulary() -> Counter:
     if not VOCABULARY_FILE.exists():
@@ -51,7 +54,11 @@ Keywords: family gathering, outdoor garden, sunny afternoon, children playing, p
 
     parts = [base]
     if top_terms:
-        parts.append(f"Prefer reusing these existing terms where accurate: {', '.join(top_terms)}")
+        parts.append(
+            f"For consistency, use these terms instead of synonyms where they "
+            f"genuinely apply to THIS photo. Do not include any that don't fit: "
+            f"{', '.join(top_terms)}"
+        )
     if blacklist:
         parts.append(f"Never use these terms: {', '.join(sorted(blacklist))}")
     return "\n\n".join(parts)

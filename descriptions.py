@@ -16,7 +16,6 @@ def load_descriptions() -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 def parse_keywords(description: str) -> list[str]:
-    # strip whitespace from each keyword the model produced
     return [k.strip() for k in description.split(",") if k.strip()]
 
 def write_tags(records: list[dict], dry_run: bool = True):

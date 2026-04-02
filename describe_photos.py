@@ -5,10 +5,10 @@ import time
 _client = ollama.Client(timeout=120)
 
 from pathlib import Path
-from config import PHOTO_DIR, OUTPUT_DIR, MODEL, EXTENSIONS, VOCABULARY_PROMPT_SIZE
+from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
-    update_vocabulary, build_prompt
+    update_vocabulary, build_prompt, scan_photos
 )
 from scrub_descriptions import scrub_keywords
 
@@ -61,16 +61,14 @@ def parse_response(raw: str) -> tuple[str, str]:
 
 def run_pipeline():
     processed = load_processed()
-    photos = [
-        p for p in PHOTO_DIR.rglob("*")
-        if p.suffix.lower() in EXTENSIONS and str(p) not in processed
-    ]
+    photos = [p for p in scan_photos() if str(p) not in processed]
     print(f"Found {len(photos)} unprocessed photos")
+
+    vocabulary = load_vocabulary()
+    blacklist = load_blacklist()
 
     with OUTPUT_FILE.open("a") as out, METRICS_FILE.open("a") as metrics_out:
         for i, photo in enumerate(photos):
-            vocabulary = load_vocabulary()
-            blacklist = load_blacklist()
             prompt = build_prompt(vocabulary, blacklist, VOCABULARY_PROMPT_SIZE)
             try:
                 print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")

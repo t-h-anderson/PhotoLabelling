@@ -6,7 +6,6 @@ from vocabulary import load_blacklist
 OUTPUT_FILE = OUTPUT_DIR / "descriptions.jsonl"
 
 def scrub_keywords(description: str, blacklist: set[str]) -> str:
-    # remove blacklisted terms and tidy up any resulting empty slots
     keywords = [
         k.strip() for k in description.split(",")
         if k.strip().lower() not in blacklist

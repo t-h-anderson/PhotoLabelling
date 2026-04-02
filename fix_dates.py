@@ -1,7 +1,7 @@
 import exiftool
 from datetime import datetime
 from pathlib import Path
-from config import PHOTO_DIR, EXTENSIONS
+from vocabulary import scan_photos
 
 EXIF_DATE_FORMAT = "%Y:%m:%d %H:%M:%S"
 
@@ -21,7 +21,7 @@ def filesystem_date(path: Path) -> datetime:
 
 
 def fix_dates(dry_run: bool = True):
-    photos = [p for p in PHOTO_DIR.rglob("*") if p.suffix.lower() in EXTENSIONS]
+    photos = scan_photos()
     print(f"Found {len(photos)} photos")
 
     fixed = skipped = errors = 0
