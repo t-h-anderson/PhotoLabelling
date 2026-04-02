@@ -80,10 +80,20 @@ def parse_response(raw: str) -> tuple[str, str, str, int]:
                 model_rating = 0
     return title, caption, keywords, model_rating
 
+def _sharpness_tier(sharpness: float) -> tuple[int, str]:
+    """Returns (max_stars, focus_keyword) for a given sharpness score."""
+    t = SHARPNESS_BLUR_THRESHOLD
+    if sharpness < t * 0.5:
+        return 2, "very blurred focus"
+    if sharpness < t:
+        return 3, "blurred focus"
+    if sharpness < t * 2:
+        return 4, "in focus"
+    return 5, "sharp focus"
+
 def final_rating(model_rating: int, sharpness: float) -> int:
-    if model_rating and sharpness < SHARPNESS_BLUR_THRESHOLD:
-        return max(1, model_rating - 1)
-    return model_rating
+    max_stars, _ = _sharpness_tier(sharpness)
+    return min(model_rating, max_stars) if model_rating else 0
 
 def run_pipeline():
     processed = load_processed()
@@ -102,7 +112,7 @@ def run_pipeline():
                 title, caption, keywords, model_rating = parse_response(raw_description)
                 keywords = scrub_keywords(keywords, blacklist)
                 rating = final_rating(model_rating, metrics["sharpness"])
-                focus_tag = "blurry focus" if metrics["sharpness"] < SHARPNESS_BLUR_THRESHOLD else "sharp focus"
+                _, focus_tag = _sharpness_tier(metrics["sharpness"])
                 keywords = f"{keywords}, {focus_tag}" if keywords else focus_tag
 
                 record = {"path": photo.as_posix(), "title": title, "caption": caption, "keywords": keywords, "rating": rating}
