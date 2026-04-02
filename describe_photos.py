@@ -26,7 +26,10 @@ def load_processed() -> set[str]:
 def _prepare_image(image_path: Path) -> tuple[bytes, float]:
     with Image.open(image_path) as img:
         img.thumbnail((MAX_IMAGE_PX, MAX_IMAGE_PX), Image.LANCZOS)
-        sharpness = round(ImageStat.Stat(img.convert("L").filter(ImageFilter.FIND_EDGES)).var[0], 1)
+        gray = img.convert("L")
+        edge_var = ImageStat.Stat(gray.filter(ImageFilter.FIND_EDGES)).var[0]
+        rms_contrast = ImageStat.Stat(gray).stddev[0]
+        sharpness = round(edge_var / (rms_contrast + 1), 3)
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=85)
         return buf.getvalue(), sharpness
