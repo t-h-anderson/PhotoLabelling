@@ -5,18 +5,15 @@ import time
 _client = ollama.Client(timeout=120)
 
 from pathlib import Path
+from config import PHOTO_DIR, OUTPUT_DIR, MODEL, EXTENSIONS, VOCABULARY_PROMPT_SIZE
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
     update_vocabulary, build_prompt
 )
 from scrub_descriptions import scrub_keywords
 
-PHOTO_DIR = Path(r"S:\ExternalBackup\Tom\Photos\Sorted")
-OUTPUT_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\descriptions.jsonl")
-METRICS_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\metrics.jsonl")
-EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".tiff", ".raf"}
-MODEL = "qwen2.5vl:7b"
-VOCABULARY_PROMPT_SIZE = 100
+OUTPUT_FILE = OUTPUT_DIR / "descriptions.jsonl"
+METRICS_FILE = OUTPUT_DIR / "metrics.jsonl"
 
 def load_processed() -> set[str]:
     if not OUTPUT_FILE.exists():

@@ -1,9 +1,10 @@
 import json
 import exiftool
 from pathlib import Path
+from config import OUTPUT_DIR
 from fix_dates import filesystem_date, DATE_TAGS, EXIF_DATE_FORMAT
 
-DESCRIPTIONS_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\descriptions.jsonl")
+DESCRIPTIONS_FILE = OUTPUT_DIR / "descriptions.jsonl"
 
 # write to both IPTC and XMP for maximum compatibility with Immich,
 # Lightroom, Windows Explorer etc.

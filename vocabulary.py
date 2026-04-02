@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 from collections import Counter
+from config import OUTPUT_DIR
 
-VOCABULARY_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\vocabulary.json")
-BLACKLIST_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\blacklist.txt")
+VOCABULARY_FILE = OUTPUT_DIR / "vocabulary.json"
+BLACKLIST_FILE = OUTPUT_DIR / "blacklist.txt"
 
 def load_vocabulary() -> Counter:
     if not VOCABULARY_FILE.exists():

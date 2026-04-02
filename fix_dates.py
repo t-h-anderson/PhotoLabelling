@@ -1,9 +1,8 @@
 import exiftool
 from datetime import datetime
 from pathlib import Path
+from config import PHOTO_DIR, EXTENSIONS
 
-PHOTO_DIR = Path(r"S:\ExternalBackup\Tom\Photos\Sorted")
-EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".tiff", ".raf"}
 EXIF_DATE_FORMAT = "%Y:%m:%d %H:%M:%S"
 
 # Tags to write when date taken is missing
