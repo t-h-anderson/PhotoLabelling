@@ -31,7 +31,7 @@ def _prepare_image(image_path: Path) -> tuple[bytes, float]:
         rms_contrast = ImageStat.Stat(gray).stddev[0]
         sharpness = round(edge_var / (rms_contrast + 1), 3)
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=85)
+        img.convert("RGB").save(buf, format="JPEG", quality=85)
         return buf.getvalue(), sharpness
 
 def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
