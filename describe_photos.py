@@ -106,7 +106,7 @@ def run_pipeline():
                 rating = final_rating(model_rating, metrics["sharpness"])
 
                 record = {"path": str(photo), "title": title, "caption": caption, "keywords": keywords, "rating": rating}
-                out.write(json.dumps(record) + "\n")
+                out.write(json.dumps(record, ensure_ascii=False) + "\n")
                 out.flush()
 
                 metrics["path"] = str(photo)

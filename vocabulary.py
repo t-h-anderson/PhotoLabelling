@@ -18,7 +18,7 @@ def load_vocabulary() -> Counter:
     return Counter(json.loads(content))
 def save_vocabulary(vocabulary: Counter):
     with VOCABULARY_FILE.open("w") as f:
-        json.dump(dict(vocabulary.most_common()), f, indent=2)
+        json.dump(dict(vocabulary.most_common()), f, indent=2, ensure_ascii=False)
 
 def load_blacklist() -> set[str]:
     if not BLACKLIST_FILE.exists():

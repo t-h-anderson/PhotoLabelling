@@ -38,7 +38,7 @@ def scrub_descriptions():
     temp_file = OUTPUT_FILE.with_suffix(".jsonl.tmp")
     with temp_file.open("w") as f:
         for record in records:
-            f.write(json.dumps(record) + "\n")
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
     temp_file.replace(OUTPUT_FILE)
 
     print(f"Scrubbed {scrubbed_count} descriptions, {len(records)} total records")
