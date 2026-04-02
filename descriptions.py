@@ -1,6 +1,7 @@
 import json
 import exiftool
 from pathlib import Path
+from fix_dates import filesystem_date, DATE_TAGS, EXIF_DATE_FORMAT
 
 DESCRIPTIONS_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\descriptions.jsonl")
 
@@ -29,10 +30,18 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 print(f"SKIP (no keywords): {path}")
                 continue
 
+            # check for missing date taken before any writes alter st_mtime
+            existing_tags = et.get_tags(path, ["EXIF:DateTimeOriginal"])[0]
+            date_str = None
+            if not existing_tags.get("EXIF:DateTimeOriginal"):
+                date_str = filesystem_date(Path(path)).strftime(EXIF_DATE_FORMAT)
+
             if dry_run:
                 print(f"DRY RUN {path}")
                 print(f"  Title:    {title}")
                 print(f"  Keywords: {keywords}")
+                if date_str:
+                    print(f"  Date:     {date_str} (backfilled from filesystem)")
                 continue
 
             try:
@@ -42,8 +51,11 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 if title:
                     for tag in TITLE_TAGS:
                         params[tag] = title
+                if date_str:
+                    for tag in DATE_TAGS:
+                        params[tag] = date_str
                 et.set_tags(path, params)
-                print(f"OK: {Path(path).name}")
+                print(f"OK: {Path(path).name}" + (f" (date backfilled: {date_str})" if date_str else ""))
             except Exception as e:
                 print(f"FAILED {path}: {e}")
 
