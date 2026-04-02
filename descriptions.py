@@ -7,7 +7,7 @@ DESCRIPTIONS_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\descriptions.j
 # write to both IPTC and XMP for maximum compatibility with Immich,
 # Lightroom, Windows Explorer etc.
 KEYWORD_TAGS = ["IPTC:Keywords", "XMP:Subject"]
-DESCRIPTION_TAG = "XMP:Description"
+TITLE_TAGS = ["XMP:Title", "XMP:Description"]
 
 def load_descriptions() -> list[dict]:
     with DESCRIPTIONS_FILE.open() as f:
@@ -21,7 +21,9 @@ def write_tags(records: list[dict], dry_run: bool = True):
     with exiftool.ExifToolHelper() as et:
         for record in records:
             path = record["path"]
-            keywords = parse_keywords(record["description"])
+            # support both new format (title + keywords) and old format (description)
+            title = record.get("title", "")
+            keywords = parse_keywords(record.get("keywords", record.get("description", "")))
 
             if not keywords:
                 print(f"SKIP (no keywords): {path}")
@@ -29,6 +31,7 @@ def write_tags(records: list[dict], dry_run: bool = True):
 
             if dry_run:
                 print(f"DRY RUN {path}")
+                print(f"  Title:    {title}")
                 print(f"  Keywords: {keywords}")
                 continue
 
@@ -36,7 +39,9 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 # exiftool creates a .jpg_original backup by default,
                 # so your originals are safe
                 params = {tag: keywords for tag in KEYWORD_TAGS}
-                params[DESCRIPTION_TAG] = record["description"]
+                if title:
+                    for tag in TITLE_TAGS:
+                        params[tag] = title
                 et.set_tags(path, params)
                 print(f"OK: {Path(path).name}")
             except Exception as e:

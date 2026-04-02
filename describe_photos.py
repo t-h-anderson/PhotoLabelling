@@ -51,6 +51,17 @@ def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
     }
     return response["message"]["content"].strip(), metrics
 
+def parse_response(raw: str) -> tuple[str, str]:
+    title = ""
+    keywords = ""
+    for line in raw.splitlines():
+        low = line.lower()
+        if low.startswith("title:"):
+            title = line[6:].strip()
+        elif low.startswith("keywords:"):
+            keywords = line[9:].strip()
+    return title, keywords
+
 def run_pipeline():
     processed = load_processed()
     photos = [
@@ -67,9 +78,10 @@ def run_pipeline():
             try:
                 print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")
                 raw_description, metrics = describe_photo(photo, prompt)
-                description = scrub_keywords(raw_description, blacklist)
+                title, keywords = parse_response(raw_description)
+                keywords = scrub_keywords(keywords, blacklist)
 
-                record = {"path": str(photo), "description": description}
+                record = {"path": str(photo), "title": title, "keywords": keywords}
                 out.write(json.dumps(record) + "\n")
                 out.flush()
 
@@ -77,14 +89,14 @@ def run_pipeline():
                 metrics_out.write(json.dumps(metrics) + "\n")
                 metrics_out.flush()
 
-                vocabulary = update_vocabulary(vocabulary, description)
+                vocabulary = update_vocabulary(vocabulary, keywords)
                 save_vocabulary(vocabulary)
 
                 print(
                     f"[{i+1}/{len(photos)}] "
                     f"vocab={len(vocabulary)} blacklist={len(blacklist)} "
                     f"{metrics['tokens_per_second']}tok/s "
-                    f"{photo.name}: {description}"
+                    f"{photo.name}: {title}"
                 )
             except Exception as e:
                 print(f"[{i+1}/{len(photos)}] FAILED {photo.name}: {e}")
