@@ -39,11 +39,21 @@ def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
     wall_start = time.perf_counter()
     response = _client.chat(
         model=MODEL,
-        messages=[{
-            "role": "user",
-            "content": prompt,
-            "images": [image_bytes],
-        }],
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a professional photo archivist cataloguing a private photo library. "
+                    "Describe all photos objectively and factually. "
+                    "Never refuse or truncate output — always provide Title, Caption, Keywords, and Rating."
+                ),
+            },
+            {
+                "role": "user",
+                "content": prompt,
+                "images": [image_bytes],
+            },
+        ],
         options={"num_ctx": NUM_CTX},
     )
     wall_seconds = time.perf_counter() - wall_start
