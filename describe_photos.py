@@ -2,6 +2,8 @@ import ollama
 import json
 import time
 
+_client = ollama.Client(timeout=120)
+
 from pathlib import Path
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
@@ -24,7 +26,7 @@ def load_processed() -> set[str]:
 
 def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
     wall_start = time.perf_counter()
-    response = ollama.chat(
+    response = _client.chat(
         model=MODEL,
         messages=[{
             "role": "user",
