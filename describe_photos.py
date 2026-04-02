@@ -1,11 +1,13 @@
 import ollama
 import json
 import time
+import io
+from PIL import Image
 
 _client = ollama.Client(timeout=120)
 
 from pathlib import Path
-from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE
+from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE, MAX_IMAGE_PX
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
     update_vocabulary, build_prompt, scan_photos
@@ -21,14 +23,22 @@ def load_processed() -> set[str]:
     with OUTPUT_FILE.open() as f:
         return {json.loads(line)["path"] for line in f if line.strip()}
 
+def _prepare_image(image_path: Path) -> bytes:
+    with Image.open(image_path) as img:
+        img.thumbnail((MAX_IMAGE_PX, MAX_IMAGE_PX), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        return buf.getvalue()
+
 def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
+    image_bytes = _prepare_image(image_path)
     wall_start = time.perf_counter()
     response = _client.chat(
         model=MODEL,
         messages=[{
             "role": "user",
             "content": prompt,
-            "images": [str(image_path)],
+            "images": [image_bytes],
         }],
     )
     wall_seconds = time.perf_counter() - wall_start
