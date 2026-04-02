@@ -7,6 +7,7 @@ from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
     update_vocabulary, build_prompt
 )
+from scrub_descriptions import scrub_keywords
 
 PHOTO_DIR = Path(r"S:\ExternalBackup\Tom\Photos\Sorted")
 OUTPUT_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\descriptions.jsonl")
@@ -62,11 +63,7 @@ def run_pipeline():
             blacklist = load_blacklist()
             prompt = build_prompt(vocabulary, blacklist, VOCABULARY_PROMPT_SIZE)
             try:
-
-		print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")
-		raw_description, metrics = describe_photo(photo, prompt)
-		description = scrub_keywords(raw_description, blacklist)
-
+                print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")
                 raw_description, metrics = describe_photo(photo, prompt)
                 description = scrub_keywords(raw_description, blacklist)
 
