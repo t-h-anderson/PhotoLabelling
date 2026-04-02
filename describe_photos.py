@@ -2,7 +2,7 @@ import ollama
 import json
 import time
 import io
-from PIL import Image
+from PIL import Image, ImageFilter, ImageStat
 
 _client = ollama.Client(timeout=120)
 
@@ -23,15 +23,16 @@ def load_processed() -> set[str]:
     with OUTPUT_FILE.open() as f:
         return {json.loads(line)["path"] for line in f if line.strip()}
 
-def _prepare_image(image_path: Path) -> bytes:
+def _prepare_image(image_path: Path) -> tuple[bytes, float]:
     with Image.open(image_path) as img:
         img.thumbnail((MAX_IMAGE_PX, MAX_IMAGE_PX), Image.LANCZOS)
+        sharpness = round(ImageStat.Stat(img.convert("L").filter(ImageFilter.FIND_EDGES)).var[0], 1)
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=85)
-        return buf.getvalue()
+        return buf.getvalue(), sharpness
 
 def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
-    image_bytes = _prepare_image(image_path)
+    image_bytes, sharpness = _prepare_image(image_path)
     wall_start = time.perf_counter()
     response = _client.chat(
         model=MODEL,
@@ -55,13 +56,15 @@ def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
         "output_tokens": eval_count,
         "prompt_tokens": response.prompt_eval_count or 0,
         "load_duration_seconds": round((response.load_duration or 0) / ns, 3),
+        "sharpness": sharpness,
     }
     return response["message"]["content"].strip(), metrics
 
-def parse_response(raw: str) -> tuple[str, str, str]:
+def parse_response(raw: str) -> tuple[str, str, str, int]:
     title = ""
     caption = ""
     keywords = ""
+    model_rating = 0
     for line in raw.splitlines():
         low = line.lower()
         if low.startswith("title:"):
@@ -70,7 +73,19 @@ def parse_response(raw: str) -> tuple[str, str, str]:
             caption = line[8:].strip()
         elif low.startswith("keywords:"):
             keywords = line[9:].strip()
-    return title, caption, keywords
+        elif low.startswith("rating:"):
+            try:
+                model_rating = max(1, min(5, int(line[7:].strip())))
+            except ValueError:
+                model_rating = 0
+    return title, caption, keywords, model_rating
+
+def final_rating(model_rating: int, sharpness: float) -> int:
+    # cap the model's rating if the sharpness score suggests a blurry image
+    from config import SHARPNESS_BLUR_THRESHOLD
+    if model_rating and sharpness < SHARPNESS_BLUR_THRESHOLD:
+        return max(1, model_rating - 1)
+    return model_rating
 
 def run_pipeline():
     processed = load_processed()
@@ -86,10 +101,11 @@ def run_pipeline():
             try:
                 print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")
                 raw_description, metrics = describe_photo(photo, prompt)
-                title, caption, keywords = parse_response(raw_description)
+                title, caption, keywords, model_rating = parse_response(raw_description)
                 keywords = scrub_keywords(keywords, blacklist)
+                rating = final_rating(model_rating, metrics["sharpness"])
 
-                record = {"path": str(photo), "title": title, "caption": caption, "keywords": keywords}
+                record = {"path": str(photo), "title": title, "caption": caption, "keywords": keywords, "rating": rating}
                 out.write(json.dumps(record) + "\n")
                 out.flush()
 

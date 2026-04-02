@@ -11,6 +11,7 @@ DESCRIPTIONS_FILE = OUTPUT_DIR / "descriptions.jsonl"
 KEYWORD_TAGS = ["IPTC:Keywords", "XMP:Subject"]
 TITLE_TAGS = ["XMP:Title", "XMP:Description"]
 CAPTION_TAGS = ["IPTC:Caption-Abstract", "XMP:Caption"]
+RATING_TAG = "XMP:Rating"
 
 def load_descriptions() -> list[dict]:
     with DESCRIPTIONS_FILE.open() as f:
@@ -31,6 +32,7 @@ def write_tags(records: list[dict], dry_run: bool = True):
             title = record.get("title", "")
             caption = record.get("caption", "")
             keywords = parse_keywords(record.get("keywords", record.get("description", "")))
+            rating = record.get("rating", 0)
 
             if not keywords:
                 print(f"SKIP (no keywords): {path}")
@@ -49,6 +51,7 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 print(f"  Title:    {title}")
                 print(f"  Caption:  {caption}")
                 print(f"  Keywords: {keywords}")
+                print(f"  Rating:   {rating}/5")
                 if date_str:
                     print(f"  Date:     {date_str} (backfilled from filesystem)")
                 if raf:
@@ -62,6 +65,8 @@ def write_tags(records: list[dict], dry_run: bool = True):
             if caption:
                 for tag in CAPTION_TAGS:
                     params[tag] = caption
+            if rating:
+                params[RATING_TAG] = rating
             if date_str:
                 for tag in DATE_TAGS:
                     params[tag] = date_str
