@@ -2,18 +2,18 @@ import ollama
 import json
 import time
 
+_client = ollama.Client(timeout=120)
+
 from pathlib import Path
+from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
-    update_vocabulary, build_prompt
+    update_vocabulary, build_prompt, scan_photos
 )
+from scrub_descriptions import scrub_keywords
 
-PHOTO_DIR = Path(r"S:\ExternalBackup\Tom\Photos\Sorted")
-OUTPUT_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\descriptions.jsonl")
-METRICS_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\metrics.jsonl")
-EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".tiff", ".raf"}
-MODEL = "qwen2.5vl:7b"
-VOCABULARY_PROMPT_SIZE = 100
+OUTPUT_FILE = OUTPUT_DIR / "descriptions.jsonl"
+METRICS_FILE = OUTPUT_DIR / "metrics.jsonl"
 
 def load_processed() -> set[str]:
     if not OUTPUT_FILE.exists():
@@ -23,7 +23,7 @@ def load_processed() -> set[str]:
 
 def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
     wall_start = time.perf_counter()
-    response = ollama.chat(
+    response = _client.chat(
         model=MODEL,
         messages=[{
             "role": "user",
@@ -48,29 +48,35 @@ def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
     }
     return response["message"]["content"].strip(), metrics
 
+def parse_response(raw: str) -> tuple[str, str]:
+    title = ""
+    keywords = ""
+    for line in raw.splitlines():
+        low = line.lower()
+        if low.startswith("title:"):
+            title = line[6:].strip()
+        elif low.startswith("keywords:"):
+            keywords = line[9:].strip()
+    return title, keywords
+
 def run_pipeline():
     processed = load_processed()
-    photos = [
-        p for p in PHOTO_DIR.rglob("*")
-        if p.suffix.lower() in EXTENSIONS and str(p) not in processed
-    ]
+    photos = [p for p in scan_photos() if str(p) not in processed]
     print(f"Found {len(photos)} unprocessed photos")
+
+    vocabulary = load_vocabulary()
+    blacklist = load_blacklist()
 
     with OUTPUT_FILE.open("a") as out, METRICS_FILE.open("a") as metrics_out:
         for i, photo in enumerate(photos):
-            vocabulary = load_vocabulary()
-            blacklist = load_blacklist()
             prompt = build_prompt(vocabulary, blacklist, VOCABULARY_PROMPT_SIZE)
             try:
-
-		print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")
-		raw_description, metrics = describe_photo(photo, prompt)
-		description = scrub_keywords(raw_description, blacklist)
-
+                print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")
                 raw_description, metrics = describe_photo(photo, prompt)
-                description = scrub_keywords(raw_description, blacklist)
+                title, keywords = parse_response(raw_description)
+                keywords = scrub_keywords(keywords, blacklist)
 
-                record = {"path": str(photo), "description": description}
+                record = {"path": str(photo), "title": title, "keywords": keywords}
                 out.write(json.dumps(record) + "\n")
                 out.flush()
 
@@ -78,14 +84,14 @@ def run_pipeline():
                 metrics_out.write(json.dumps(metrics) + "\n")
                 metrics_out.flush()
 
-                vocabulary = update_vocabulary(vocabulary, description)
+                vocabulary = update_vocabulary(vocabulary, keywords)
                 save_vocabulary(vocabulary)
 
                 print(
                     f"[{i+1}/{len(photos)}] "
                     f"vocab={len(vocabulary)} blacklist={len(blacklist)} "
                     f"{metrics['tokens_per_second']}tok/s "
-                    f"{photo.name}: {description}"
+                    f"{photo.name}: {title}"
                 )
             except Exception as e:
                 print(f"[{i+1}/{len(photos)}] FAILED {photo.name}: {e}")

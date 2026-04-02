@@ -1,11 +1,11 @@
 import json
 from pathlib import Path
+from config import OUTPUT_DIR
 from vocabulary import load_blacklist
 
-OUTPUT_FILE = Path(r"D:\Users\tomha\Projects\PhotoArchiving\descriptions.jsonl")
+OUTPUT_FILE = OUTPUT_DIR / "descriptions.jsonl"
 
 def scrub_keywords(description: str, blacklist: set[str]) -> str:
-    # remove blacklisted terms and tidy up any resulting empty slots
     keywords = [
         k.strip() for k in description.split(",")
         if k.strip().lower() not in blacklist
@@ -26,10 +26,11 @@ def scrub_descriptions():
             if not line.strip():
                 continue
             record = json.loads(line)
-            original = record["description"]
+            field = "keywords" if "keywords" in record else "description"
+            original = record[field]
             scrubbed = scrub_keywords(original, blacklist)
             if scrubbed != original:
-                record["description"] = scrubbed
+                record[field] = scrubbed
                 scrubbed_count += 1
             records.append(record)
 
