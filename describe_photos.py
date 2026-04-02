@@ -58,16 +58,19 @@ def describe_photo(image_path: Path, prompt: str) -> tuple[str, dict]:
     }
     return response["message"]["content"].strip(), metrics
 
-def parse_response(raw: str) -> tuple[str, str]:
+def parse_response(raw: str) -> tuple[str, str, str]:
     title = ""
+    caption = ""
     keywords = ""
     for line in raw.splitlines():
         low = line.lower()
         if low.startswith("title:"):
             title = line[6:].strip()
+        elif low.startswith("caption:"):
+            caption = line[8:].strip()
         elif low.startswith("keywords:"):
             keywords = line[9:].strip()
-    return title, keywords
+    return title, caption, keywords
 
 def run_pipeline():
     processed = load_processed()
@@ -83,10 +86,10 @@ def run_pipeline():
             try:
                 print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")
                 raw_description, metrics = describe_photo(photo, prompt)
-                title, keywords = parse_response(raw_description)
+                title, caption, keywords = parse_response(raw_description)
                 keywords = scrub_keywords(keywords, blacklist)
 
-                record = {"path": str(photo), "title": title, "keywords": keywords}
+                record = {"path": str(photo), "title": title, "caption": caption, "keywords": keywords}
                 out.write(json.dumps(record) + "\n")
                 out.flush()
 

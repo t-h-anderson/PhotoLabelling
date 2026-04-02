@@ -37,12 +37,14 @@ def build_prompt(vocabulary: Counter, blacklist: set[str], prompt_size: int) -> 
     base = """\
 Describe this photo in exactly this format, with no preamble:
 Title: <one short descriptive sentence, max 10 words>
+Caption: <one or two sentences describing the scene, people, and mood>
 Keywords: <15-20 keywords or short phrases, comma-separated>
 
 The keywords should cover: main subject, action or event, setting, mood or lighting, notable details.
 No punctuation in keywords other than commas.
 Example:
 Title: Family picnic in a sunny garden
+Caption: A family enjoys an outdoor picnic on a sunny afternoon, with children playing around a wooden table.
 Keywords: family gathering, outdoor garden, sunny afternoon, children playing, picnic table"""
 
     top_terms = [

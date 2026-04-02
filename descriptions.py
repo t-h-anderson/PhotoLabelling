@@ -10,6 +10,7 @@ DESCRIPTIONS_FILE = OUTPUT_DIR / "descriptions.jsonl"
 # Lightroom, Windows Explorer etc.
 KEYWORD_TAGS = ["IPTC:Keywords", "XMP:Subject"]
 TITLE_TAGS = ["XMP:Title", "XMP:Description"]
+CAPTION_TAGS = ["IPTC:Caption-Abstract", "XMP:Caption"]
 
 def load_descriptions() -> list[dict]:
     with DESCRIPTIONS_FILE.open() as f:
@@ -28,6 +29,7 @@ def write_tags(records: list[dict], dry_run: bool = True):
             path = record["path"]
             # support both new format (title + keywords) and old format (description)
             title = record.get("title", "")
+            caption = record.get("caption", "")
             keywords = parse_keywords(record.get("keywords", record.get("description", "")))
 
             if not keywords:
@@ -45,6 +47,7 @@ def write_tags(records: list[dict], dry_run: bool = True):
             if dry_run:
                 print(f"DRY RUN {path}")
                 print(f"  Title:    {title}")
+                print(f"  Caption:  {caption}")
                 print(f"  Keywords: {keywords}")
                 if date_str:
                     print(f"  Date:     {date_str} (backfilled from filesystem)")
@@ -56,6 +59,9 @@ def write_tags(records: list[dict], dry_run: bool = True):
             if title:
                 for tag in TITLE_TAGS:
                     params[tag] = title
+            if caption:
+                for tag in CAPTION_TAGS:
+                    params[tag] = caption
             if date_str:
                 for tag in DATE_TAGS:
                     params[tag] = date_str
