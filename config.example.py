@@ -10,8 +10,10 @@ OUTPUT_DIR = Path(r"")
 # Ollama vision model to use
 MODEL = "qwen2.5vl:7b"
 
-# File extensions to include when scanning PHOTO_DIR
-EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".tiff", ".raf"}
+# File extensions to include when scanning PHOTO_DIR.
+# RAF (Fujifilm RAW) is excluded — the paired JPEG is processed instead,
+# and tags are mirrored to the RAF by descriptions.py.
+EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".tiff"}
 
 # Number of vocabulary terms to include in the AI prompt.
 # Keep this low — smaller models treat long lists as things to copy, not hints.

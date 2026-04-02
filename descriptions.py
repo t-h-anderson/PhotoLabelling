@@ -18,6 +18,10 @@ def load_descriptions() -> list[dict]:
 def parse_keywords(description: str) -> list[str]:
     return [k.strip() for k in description.split(",") if k.strip()]
 
+def paired_raf(jpeg_path: Path) -> Path | None:
+    raf = jpeg_path.with_suffix(".RAF")
+    return raf if raf.exists() else None
+
 def write_tags(records: list[dict], dry_run: bool = True):
     with exiftool.ExifToolHelper() as et:
         for record in records:
@@ -36,28 +40,34 @@ def write_tags(records: list[dict], dry_run: bool = True):
             if not existing_tags.get("EXIF:DateTimeOriginal"):
                 date_str = filesystem_date(Path(path)).strftime(EXIF_DATE_FORMAT)
 
+            raf = paired_raf(Path(path))
+
             if dry_run:
                 print(f"DRY RUN {path}")
                 print(f"  Title:    {title}")
                 print(f"  Keywords: {keywords}")
                 if date_str:
                     print(f"  Date:     {date_str} (backfilled from filesystem)")
+                if raf:
+                    print(f"  RAF:      {raf.name} (tags will be mirrored)")
                 continue
 
-            try:
-                # exiftool creates a .jpg_original backup by default,
-                # so your originals are safe
-                params = {tag: keywords for tag in KEYWORD_TAGS}
-                if title:
-                    for tag in TITLE_TAGS:
-                        params[tag] = title
-                if date_str:
-                    for tag in DATE_TAGS:
-                        params[tag] = date_str
-                et.set_tags(path, params)
-                print(f"OK: {Path(path).name}" + (f" (date backfilled: {date_str})" if date_str else ""))
-            except Exception as e:
-                print(f"FAILED {path}: {e}")
+            params = {tag: keywords for tag in KEYWORD_TAGS}
+            if title:
+                for tag in TITLE_TAGS:
+                    params[tag] = title
+            if date_str:
+                for tag in DATE_TAGS:
+                    params[tag] = date_str
+
+            targets = [path, str(raf)] if raf else [path]
+            for target in targets:
+                try:
+                    # exiftool creates a .jpg_original / .RAF_original backup by default
+                    et.set_tags(target, params)
+                    print(f"OK: {Path(target).name}" + (f" (date backfilled: {date_str})" if date_str else ""))
+                except Exception as e:
+                    print(f"FAILED {Path(target).name}: {e}")
 
 if __name__ == "__main__":
     records = load_descriptions()
