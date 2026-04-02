@@ -89,7 +89,7 @@ def final_rating(model_rating: int, sharpness: float) -> int:
 
 def run_pipeline():
     processed = load_processed()
-    photos = [p for p in scan_photos() if str(p) not in processed]
+    photos = [p for p in scan_photos() if p.as_posix() not in processed]
     print(f"Found {len(photos)} unprocessed photos")
 
     vocabulary = load_vocabulary()
@@ -105,11 +105,11 @@ def run_pipeline():
                 keywords = scrub_keywords(keywords, blacklist)
                 rating = final_rating(model_rating, metrics["sharpness"])
 
-                record = {"path": str(photo), "title": title, "caption": caption, "keywords": keywords, "rating": rating}
+                record = {"path": photo.as_posix(), "title": title, "caption": caption, "keywords": keywords, "rating": rating}
                 out.write(json.dumps(record, ensure_ascii=False) + "\n")
                 out.flush()
 
-                metrics["path"] = str(photo)
+                metrics["path"] = photo.as_posix()
                 metrics_out.write(json.dumps(metrics) + "\n")
                 metrics_out.flush()
 
