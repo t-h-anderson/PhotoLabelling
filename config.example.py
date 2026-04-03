@@ -10,6 +10,11 @@ OUTPUT_DIR = Path(r"")
 # Ollama vision model to use
 MODEL = "qwen2.5vl:7b"
 
+# Ollama host URL. Set to your RunPod endpoint to use a remote GPU, e.g.:
+#   "https://<pod-id>-11434.proxy.runpod.net"
+# Leave as None to use a local Ollama instance (http://localhost:11434).
+OLLAMA_HOST = None
+
 # File extensions to include when scanning PHOTO_DIR.
 # RAF (Fujifilm RAW) is excluded — the paired JPEG is processed instead,
 # and tags are mirrored to the RAF by descriptions.py.

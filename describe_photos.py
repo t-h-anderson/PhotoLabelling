@@ -5,10 +5,10 @@ import io
 from datetime import datetime
 from PIL import Image, ImageFilter, ImageStat
 
-_client = ollama.Client(timeout=240)
-
 from pathlib import Path
-from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE, MAX_IMAGE_PX, SHARPNESS_BLUR_THRESHOLD, NUM_CTX
+from config import OUTPUT_DIR, MODEL, OLLAMA_HOST, VOCABULARY_PROMPT_SIZE, MAX_IMAGE_PX, SHARPNESS_BLUR_THRESHOLD, NUM_CTX
+
+_client = ollama.Client(host=OLLAMA_HOST, timeout=240)
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
     update_vocabulary, build_prompt, scan_photos, event_from_path
