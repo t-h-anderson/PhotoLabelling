@@ -3,6 +3,7 @@ import exiftool
 from pathlib import Path
 from config import OUTPUT_DIR
 from fix_dates import filesystem_date, DATE_TAGS, EXIF_DATE_FORMAT
+from integrity import hash_pixels, verify_write, backup_path
 
 DESCRIPTIONS_FILE = OUTPUT_DIR / "descriptions.jsonl"
 
@@ -30,10 +31,11 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 print(f"SKIP (no keywords): {path}")
                 continue
 
-            # check for missing date taken before any writes alter st_mtime
-            existing_tags = et.get_tags(path, ["EXIF:DateTimeOriginal"])[0]
+            # Full pre-write snapshot — covers date check and integrity baseline
+            # in a single exiftool call, before any write can alter st_mtime.
+            before_tags = et.get_metadata(path)[0]
             date_str = None
-            if not existing_tags.get("EXIF:DateTimeOriginal"):
+            if not before_tags.get("EXIF:DateTimeOriginal"):
                 date_str = filesystem_date(Path(path)).strftime(EXIF_DATE_FORMAT)
 
             if dry_run:
@@ -45,8 +47,6 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 continue
 
             try:
-                # exiftool creates a .jpg_original backup by default,
-                # so your originals are safe
                 params = {tag: keywords for tag in KEYWORD_TAGS}
                 if title:
                     for tag in TITLE_TAGS:
@@ -54,8 +54,28 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 if date_str:
                     for tag in DATE_TAGS:
                         params[tag] = date_str
-                et.set_tags(path, params)
-                print(f"OK: {Path(path).name}" + (f" (date backfilled: {date_str})" if date_str else ""))
+
+                before_pixels = hash_pixels(path)
+                et.set_tags(path, params)  # exiftool auto-creates .jpg_original backup
+                after_pixels = hash_pixels(path)
+                after_tags = et.get_metadata(path)[0]
+
+                ok, reason = verify_write(
+                    before_tags, after_tags,
+                    before_pixels, after_pixels,
+                    written_tags=set(params.keys()),
+                )
+
+                suffix = f" (date backfilled: {date_str})" if date_str else ""
+                if ok:
+                    bp = backup_path(path)
+                    if bp.exists():
+                        bp.unlink()
+                    print(f"OK: {Path(path).name}{suffix}")
+                else:
+                    print(f"WARNING: {Path(path).name}{suffix}")
+                    print(f"  Integrity check failed: {reason}")
+                    print(f"  Backup preserved: {backup_path(path).name}")
             except Exception as e:
                 print(f"FAILED {path}: {e}")
 

@@ -1,0 +1,3 @@
+ollama
+pyexiftool
+Pillow>=10.0
