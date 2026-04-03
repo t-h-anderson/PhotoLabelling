@@ -10,9 +10,21 @@ except ImportError:
 # Tags that exiftool may update automatically as a side-effect of any write,
 # regardless of what we explicitly set. Changes to these are not unexpected.
 EXIFTOOL_AUTO_TAGS = frozenset({
+    # Filesystem timestamps
     "File:FileModifyDate",
+    "File:FileAccessDate",
     "File:FileSize",
     "File:FilePermissions",
+    # Windows "Mark of the Web" ADS — exiftool strips it when rewriting the file
+    "File:ZoneIdentifier",
+    # IPTC checksum exiftool recomputes whenever IPTC data changes
+    "File:CurrentIPTCDigest",
+    # XMP toolkit version stamp exiftool writes when it touches XMP
+    "XMP:XMPToolkit",
+    # MPF (Multi-Picture Format) byte offsets shift when the metadata block grows
+    "MPF:MPImageStart",
+    "MPF:MPImageLength",
+    # IPTC record version/encoding exiftool may auto-set
     "IPTC:ApplicationRecordVersion",
     "IPTC:CodedCharacterSet",
     "ExifTool:ExifToolVersion",
