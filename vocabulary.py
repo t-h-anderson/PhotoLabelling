@@ -41,9 +41,10 @@ def load_vocabulary() -> Counter:
     if not content:
         return Counter()
     return Counter(json.loads(content))
+
 def save_vocabulary(vocabulary: Counter):
     with VOCABULARY_FILE.open("w") as f:
-        json.dump(dict(vocabulary.most_common()), f, indent=2)
+        json.dump(dict(vocabulary.most_common()), f, indent=2, ensure_ascii=False)
 
 def load_blacklist() -> set[str]:
     if not BLACKLIST_FILE.exists():
@@ -62,15 +63,18 @@ def build_prompt(vocabulary: Counter, blacklist: set[str], prompt_size: int, eve
     base = """\
 Describe this photo in exactly this format, with no preamble:
 Title: <one short descriptive sentence, max 10 words>
-Caption: <Detailed description of the scene, people in detail, and mood.>
+Caption: <one or two sentences describing the scene, people, and mood>
 Keywords: <15-20 keywords or short phrases, comma-separated>
+Rating: <1-5 integer: 5=excellent composition/lighting/interest, 3=average, 1=poor/blurry/badly exposed>
 
-The keywords should cover: main subject, action or event, setting, mood or lighting, notable details. 
+The keywords should cover: main subject, action or event, setting, mood or lighting, notable details.
 Audience are adult. Keywords to enable search from an archive. Use clear, direct, simple language. Avoid euphemisms.
 No punctuation in keywords other than commas.
 Example:
 Title: Family picnic in a sunny garden
-Keywords: family gathering, outdoor garden, sunny afternoon, children playing, picnic table"""
+Caption: A family enjoys an outdoor picnic on a sunny afternoon, with children playing around a wooden table.
+Keywords: family gathering, outdoor garden, sunny afternoon, children playing, picnic table
+Rating: 4"""
 
     top_terms = [
         term for term, _ in vocabulary.most_common(prompt_size)
