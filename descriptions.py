@@ -158,4 +158,4 @@ if __name__ == "__main__":
     # update=True   — re-write tags previously set by PhotoLabelling
     #                 (detected via XMP:CreatorTool); tags set by other tools
     #                 or manually edited are still left untouched
-    write_tags(records, dry_run=True, update=False)
+    write_tags(records, dry_run=False, update=True)

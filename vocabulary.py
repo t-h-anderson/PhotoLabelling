@@ -61,15 +61,14 @@ def update_vocabulary(vocabulary: Counter, description: str) -> Counter:
 
 def build_prompt(vocabulary: Counter, blacklist: set[str], prompt_size: int, event: str | None = None) -> str:
     base = """\
-Describe this photo in exactly this format, with no preamble:
+Describe this photo. Do not guess or extrapolate. Use in exactly this format, with no preamble:
 Title: <one short descriptive sentence, max 10 words>
-Caption: <one or two sentences describing the scene, people, and mood>
-Keywords: <15-20 keywords or short phrases, comma-separated>
+Caption: <one or two sentences describing the scene, people, and mood. Main subject, action or event, setting, mood or lighting, notable details>
+Keywords: <15-20 keywords or short phrases, comma-separated. Only terms you see, do not extrapolate>
 Rating: <1-5 integer: 5=excellent composition/lighting/interest, 3=average, 1=poor/blurry/badly exposed>
-
-The keywords should cover: main subject, action or event, setting, mood or lighting, notable details.
-Audience are adult. Keywords to enable search from an archive. Use clear, direct, simple language. Avoid euphemisms.
+For all output, the target audience are adults, using the keywords to enable search from an archive. Use clear, direct, simple language. Avoid euphemisms.
 No punctuation in keywords other than commas.
+
 Example:
 Title: Family picnic in a sunny garden
 Caption: A family enjoys an outdoor picnic on a sunny afternoon, with children playing around a wooden table.
