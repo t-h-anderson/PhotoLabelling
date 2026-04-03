@@ -46,24 +46,31 @@ def _desired_tags(title: str, caption: str, keywords: list[str], rating: int, da
             params[tag] = date_str
     return params
 
-def _filter_existing(existing: dict, desired: dict) -> tuple[dict, list[str]]:
-    """Return (tags_to_write, skipped_tags) using a pre-fetched tag snapshot.
+def _written_by_us(existing: dict) -> bool:
+    """True if this photo's metadata was previously written by PhotoLabelling."""
+    return str(existing.get("XMP:CreatorTool", "")).startswith("PhotoLabelling/")
 
-    Tags that already have a non-empty value are skipped so we never
-    overwrite human-edited metadata. Provenance tags are added separately
-    (after this call) and always written.
+def _filter_existing(existing: dict, desired: dict, overwrite: bool = False) -> tuple[dict, list[str], list[str]]:
+    """Return (tags_to_write, skipped_tags, update_tags) using a pre-fetched tag snapshot.
+
+    tags_to_write — tags to set (empty or overwrite=True)
+    skipped_tags  — non-empty tags left untouched (overwrite=False only)
+    update_tags   — tags being overwritten (overwrite=True only, for dry-run display)
     """
-    to_write, skipped = {}, []
+    to_write, skipped, updating = {}, [], []
     for tag, value in desired.items():
         ev = existing.get(tag)
         # treat empty string, empty list, and 0 rating as unset
-        if ev and ev != 0:
+        already_set = bool(ev and ev != 0)
+        if already_set and not overwrite:
             skipped.append(tag)
         else:
             to_write[tag] = value
-    return to_write, skipped
+            if already_set:
+                updating.append(tag)
+    return to_write, skipped, updating
 
-def write_tags(records: list[dict], dry_run: bool = True):
+def write_tags(records: list[dict], dry_run: bool = True, update: bool = False):
     with exiftool.ExifToolHelper() as et:
         for record in records:
             path = record["path"]
@@ -95,7 +102,8 @@ def write_tags(records: list[dict], dry_run: bool = True):
                     )
 
                     desired = _desired_tags(title, caption, keywords, rating, date_str)
-                    to_write, skipped = _filter_existing(before_tags, desired)
+                    overwrite = update and _written_by_us(before_tags)
+                    to_write, skipped, updating = _filter_existing(before_tags, desired, overwrite=overwrite)
 
                     # Provenance tags are always written (overwrite previous runs)
                     to_write["XMP:CreatorTool"] = f"PhotoLabelling/{MODEL}"
@@ -107,9 +115,10 @@ def write_tags(records: list[dict], dry_run: bool = True):
                     if dry_run:
                         print(f"DRY RUN {target_path.name}")
                         for tag, value in to_write.items():
-                            print(f"  SET  {tag}: {value}")
+                            verb = "UPDATE" if tag in updating else "SET   "
+                            print(f"  {verb} {tag}: {value}")
                         for tag in skipped:
-                            print(f"  WARN {tag}: already populated, skipping")
+                            print(f"  WARN  {tag}: already populated, skipping")
                         continue
 
                     if skipped:
@@ -144,6 +153,9 @@ if __name__ == "__main__":
     records = load_descriptions()
     print(f"Loaded {len(records)} records")
 
-    # run with dry_run=True first to sanity check output,
-    # then flip to False when happy
-    write_tags(records, dry_run=True)
+    # dry_run=True  — preview what would be written (default, safe to run)
+    # dry_run=False — apply changes
+    # update=True   — re-write tags previously set by PhotoLabelling
+    #                 (detected via XMP:CreatorTool); tags set by other tools
+    #                 or manually edited are still left untouched
+    write_tags(records, dry_run=True, update=False)
