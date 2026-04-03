@@ -82,9 +82,9 @@ Keywords: family gathering, outdoor garden, sunny afternoon, children playing, p
     parts = [base]
     if event:
         parts.append(
-            f"Context: this photo is from '{event}'. Use this to inform "
-            f"location, people, or activity keywords where relevant, but only "
-            f"if it genuinely fits what you can see."
+            f"The folder containing this photo is named '{event}'. "
+            f"You may use this as a hint for keywords only — do not use it in the Title. "
+            f"Only include keywords from it that genuinely match what you can see in the image."
         )
     if top_terms:
         parts.append(
