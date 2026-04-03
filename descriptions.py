@@ -53,6 +53,8 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 print(f"  Model:    PhotoLabelling/{MODEL}")
                 if labelled_at := record.get("labelled_at"):
                     print(f"  Labelled: {labelled_at}")
+                if folder_context := record.get("folder_context"):
+                    print(f"  Event:    {folder_context}")
                 continue
 
             try:
@@ -66,6 +68,8 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 params["XMP:CreatorTool"] = f"PhotoLabelling/{MODEL}"
                 if labelled_at := record.get("labelled_at"):
                     params["XMP:MetadataDate"] = labelled_at
+                if folder_context := record.get("folder_context"):
+                    params["XMP-iptcExt:Event"] = folder_context
 
                 before_pixels = hash_pixels(path)
                 et.set_tags(path, params)  # exiftool auto-creates .jpg_original backup

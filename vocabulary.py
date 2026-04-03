@@ -1,10 +1,35 @@
 import json
+import re
 from pathlib import Path
 from collections import Counter
 from config import OUTPUT_DIR, PHOTO_DIR, EXTENSIONS
 
 VOCABULARY_FILE = OUTPUT_DIR / "vocabulary.json"
 BLACKLIST_FILE = OUTPUT_DIR / "blacklist.txt"
+
+def event_from_path(path: Path) -> str | None:
+    """
+    Extract a human-readable event name from the folder immediately after
+    the first 4-digit year component in the path, then strip any leading
+    date prefix so only the event name remains.
+
+    Handled prefix forms:
+      "07.31 - Italy and Sofia"  →  "Italy and Sofia"
+      "12 - Valencia"            →  "Valencia"
+      "Thermal"                  →  "Thermal"
+
+    Returns None if no year component is found or the folder name is empty
+    after stripping.
+    """
+    parts = Path(path).parts
+    for i, part in enumerate(parts[:-1]):  # last part is the filename
+        if re.fullmatch(r"\d{4}", part):
+            event_folder = parts[i + 1]
+            # Strip optional "mm.dd - " or "mm - " date prefix
+            name = re.sub(r"^\d{1,2}(?:\.\d{1,2})?\s*-\s*", "", event_folder).strip()
+            return name or None
+    return None
+
 
 def scan_photos() -> list[Path]:
     return [p for p in PHOTO_DIR.rglob("*") if p.suffix.lower() in EXTENSIONS]
@@ -33,7 +58,7 @@ def update_vocabulary(vocabulary: Counter, description: str) -> Counter:
             vocabulary[keyword] += 1
     return vocabulary
 
-def build_prompt(vocabulary: Counter, blacklist: set[str], prompt_size: int) -> str:
+def build_prompt(vocabulary: Counter, blacklist: set[str], prompt_size: int, event: str | None = None) -> str:
     base = """\
 Describe this photo in exactly this format, with no preamble:
 Title: <one short descriptive sentence, max 10 words>
@@ -51,10 +76,16 @@ Keywords: family gathering, outdoor garden, sunny afternoon, children playing, p
         term for term, _ in vocabulary.most_common(prompt_size)
         if term not in blacklist
     ]
-    if not top_terms and not blacklist:
+    if not top_terms and not blacklist and not event:
         return base
 
     parts = [base]
+    if event:
+        parts.append(
+            f"Context: this photo is from '{event}'. Use this to inform "
+            f"location, people, or activity keywords where relevant, but only "
+            f"if it genuinely fits what you can see."
+        )
     if top_terms:
         parts.append(
             f"For consistency, use these terms instead of synonyms where they "

@@ -9,7 +9,7 @@ from pathlib import Path
 from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
-    update_vocabulary, build_prompt, scan_photos
+    update_vocabulary, build_prompt, scan_photos, event_from_path
 )
 from scrub_descriptions import scrub_keywords
 
@@ -70,7 +70,8 @@ def run_pipeline():
 
     with OUTPUT_FILE.open("a") as out, METRICS_FILE.open("a") as metrics_out:
         for i, photo in enumerate(photos):
-            prompt = build_prompt(vocabulary, blacklist, VOCABULARY_PROMPT_SIZE)
+            event = event_from_path(photo)
+            prompt = build_prompt(vocabulary, blacklist, VOCABULARY_PROMPT_SIZE, event=event)
             try:
                 print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")
                 raw_description, metrics = describe_photo(photo, prompt)
@@ -78,7 +79,8 @@ def run_pipeline():
                 keywords = scrub_keywords(keywords, blacklist)
 
                 record = {"path": str(photo), "title": title, "keywords": keywords,
-                          "labelled_at": datetime.now().isoformat(timespec="seconds")}
+                          "labelled_at": datetime.now().isoformat(timespec="seconds"),
+                          "folder_context": event}
                 out.write(json.dumps(record) + "\n")
                 out.flush()
 
