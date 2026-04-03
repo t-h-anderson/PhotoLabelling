@@ -74,7 +74,7 @@ def _filter_existing(existing: dict, desired: dict, overwrite: bool = False) -> 
     return to_write, skipped, updating
 
 def write_tags(records: list[dict], dry_run: bool = True, update: bool = False):
-    with exiftool.ExifToolHelper() as et:
+    with exiftool.ExifToolHelper(encoding="utf-8") as et:
         for record in records:
             path = record["path"]
             # support both new format (title + keywords) and old format (description)
