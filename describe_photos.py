@@ -11,7 +11,8 @@ from config import OUTPUT_DIR, MODEL, OLLAMA_HOST, VOCABULARY_PROMPT_SIZE, MAX_I
 _client = ollama.Client(host=OLLAMA_HOST, timeout=240)
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
-    update_vocabulary, build_prompt, scan_photos, event_from_path, extract_gps
+    update_vocabulary, build_prompt, scan_photos, event_from_path,
+    extract_gps, reverse_geocode,
 )
 from scrub_descriptions import scrub_keywords
 
@@ -123,7 +124,8 @@ def run_pipeline():
         for i, photo in enumerate(photos):
             event = event_from_path(photo)
             gps = extract_gps(photo)
-            prompt = build_prompt(vocabulary, blacklist, VOCABULARY_PROMPT_SIZE, event=event, gps=gps)
+            location = reverse_geocode(*gps) if gps else None
+            prompt = build_prompt(vocabulary, blacklist, VOCABULARY_PROMPT_SIZE, event=event, location=location)
             try:
                 print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")
                 raw_description, metrics = describe_photo(photo, prompt)
@@ -142,6 +144,7 @@ def run_pipeline():
                     "labelled_at": datetime.now().isoformat(timespec="seconds"),
                     "folder_context": event,
                     "gps": list(gps) if gps else None,
+                    "location": location,
                 }
                 out.write(json.dumps(record, ensure_ascii=False) + "\n")
                 out.flush()

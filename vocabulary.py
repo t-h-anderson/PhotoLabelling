@@ -1,5 +1,7 @@
 import json
 import re
+import time
+import urllib.request
 from pathlib import Path
 from collections import Counter
 from PIL import Image
@@ -36,6 +38,56 @@ def extract_gps(image_path: Path) -> tuple[float, float] | None:
                 return None
             return _dms_to_decimal(lat, lat_ref), _dms_to_decimal(lon, lon_ref)
     except Exception:
+        return None
+
+
+# Nominatim address fields in order from broad to specific
+_ADDRESS_FIELDS = [
+    "country", "state", "county", "city", "town", "village",
+    "suburb", "neighbourhood", "road",
+]
+_geocode_cache: dict[tuple[float, float], str | None] = {}
+_last_nominatim_call: float = 0.0
+
+
+def reverse_geocode(lat: float, lon: float) -> str | None:
+    """Return a human-readable location string using the Nominatim OSM API, or None."""
+    global _last_nominatim_call
+    # Round to ~1 km precision for cache hits among nearby photos
+    cache_key = (round(lat, 2), round(lon, 2))
+    if cache_key in _geocode_cache:
+        return _geocode_cache[cache_key]
+
+    # Nominatim requires max 1 request/second
+    elapsed = time.monotonic() - _last_nominatim_call
+    if elapsed < 1.0:
+        time.sleep(1.0 - elapsed)
+
+    url = (
+        f"https://nominatim.openstreetmap.org/reverse"
+        f"?lat={lat}&lon={lon}&format=json&zoom=18"
+    )
+    req = urllib.request.Request(url, headers={"User-Agent": "PhotoLabelling/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+        _last_nominatim_call = time.monotonic()
+
+        address = data.get("address", {})
+        seen: set[str] = set()
+        parts: list[str] = []
+        for key in _ADDRESS_FIELDS:
+            val = address.get(key)
+            if val and val not in seen:
+                parts.append(val)
+                seen.add(val)
+
+        location = ", ".join(parts) if parts else None
+        _geocode_cache[cache_key] = location
+        return location
+    except Exception:
+        _last_nominatim_call = time.monotonic()
+        _geocode_cache[cache_key] = None
         return None
 
 VOCABULARY_FILE = OUTPUT_DIR / "vocabulary.json"
@@ -93,7 +145,7 @@ def update_vocabulary(vocabulary: Counter, description: str) -> Counter:
             vocabulary[keyword] += 1
     return vocabulary
 
-def build_prompt(vocabulary: Counter, blacklist: set[str], prompt_size: int, event: str | None = None, gps: tuple[float, float] | None = None) -> str:
+def build_prompt(vocabulary: Counter, blacklist: set[str], prompt_size: int, event: str | None = None, location: str | None = None) -> str:
     base = """\
 Describe this photo. Do not guess or extrapolate. Use in exactly this format, with no preamble:
 Title: <one short descriptive sentence, max 10 words>
@@ -113,17 +165,14 @@ Rating: 4"""
         term for term, _ in vocabulary.most_common(prompt_size)
         if term not in blacklist
     ]
-    if not top_terms and not blacklist and not event and not gps:
+    if not top_terms and not blacklist and not event and not location:
         return base
 
     parts = [base]
-    if gps:
-        lat, lon = gps
-        lat_dir = "N" if lat >= 0 else "S"
-        lon_dir = "E" if lon >= 0 else "W"
+    if location:
         parts.append(
-            f"GPS coordinates for this photo: {abs(lat):.6f}°{lat_dir}, {abs(lon):.6f}°{lon_dir}. "
-            f"You may use the location as a hint for keywords only — do not include coordinates in the Title or Caption."
+            f"This photo was taken at: {location}. "
+            f"You may use the location as a hint for keywords only — do not include it verbatim in the Title or Caption."
         )
     if event:
         parts.append(
