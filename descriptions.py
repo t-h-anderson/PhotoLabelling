@@ -15,10 +15,13 @@ CAPTION_TAGS = ["IPTC:Caption-Abstract", "XMP:Caption"]
 RATING_TAG = "XMP:Rating"
 
 # Records which AI model generated the metadata and when it was run.
-# XMP:CreatorTool  — the tool/model that produced the content
-# XMP:MetadataDate — ISO 8601 timestamp from descriptions.jsonl ("labelled_at");
-#                    represents when the model ran, not when tags were written
-PROVENANCE_TAGS = ["XMP:CreatorTool", "XMP:MetadataDate"]
+# XMP:CreatorTool             — the tool/model that produced the content
+# XMP:MetadataDate            — ISO 8601 timestamp from descriptions.jsonl ("labelled_at");
+#                               represents when the model ran, not when tags were written
+# IPTC:Writer-Editor /
+# XMP-photoshop:CaptionWriter — "Description Writer" field in Lightroom/Immich
+PROVENANCE_TAGS = ["XMP:CreatorTool", "XMP:MetadataDate",
+                   "IPTC:Writer-Editor", "XMP-photoshop:CaptionWriter"]
 
 def load_descriptions() -> list[dict]:
     with DESCRIPTIONS_FILE.open() as f:
@@ -106,7 +109,10 @@ def write_tags(records: list[dict], dry_run: bool = True, update: bool = False):
                     to_write, skipped, updating = _filter_existing(before_tags, desired, overwrite=overwrite)
 
                     # Provenance tags are always written (overwrite previous runs)
-                    to_write["XMP:CreatorTool"] = f"PhotoLabelling/{MODEL}"
+                    tool = f"PhotoLabelling/{MODEL}"
+                    to_write["XMP:CreatorTool"] = tool
+                    to_write["IPTC:Writer-Editor"] = tool
+                    to_write["XMP-photoshop:CaptionWriter"] = tool
                     if labelled_at := record.get("labelled_at"):
                         to_write["XMP:MetadataDate"] = labelled_at
                     if folder_context := record.get("folder_context"):
