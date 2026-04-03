@@ -102,19 +102,19 @@ def scan_photos() -> list[Path]:
 def load_vocabulary() -> Counter:
     if not VOCABULARY_FILE.exists():
         return Counter()
-    content = VOCABULARY_FILE.read_text().strip()
+    content = VOCABULARY_FILE.read_text(encoding="utf-8").strip()
     if not content:
         return Counter()
     return Counter(json.loads(content))
 
 def save_vocabulary(vocabulary: Counter):
-    with VOCABULARY_FILE.open("w") as f:
+    with VOCABULARY_FILE.open("w", encoding="utf-8") as f:
         json.dump(dict(vocabulary.most_common()), f, indent=2, ensure_ascii=False)
 
 def load_blacklist() -> set[str]:
     if not BLACKLIST_FILE.exists():
         return set()
-    with BLACKLIST_FILE.open() as f:
+    with BLACKLIST_FILE.open(encoding="utf-8") as f:
         return {line.strip().lower() for line in f if line.strip()}
 
 def update_vocabulary(vocabulary: Counter, description: str) -> Counter:
