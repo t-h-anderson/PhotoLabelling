@@ -17,6 +17,8 @@ EXIFTOOL_AUTO_TAGS = frozenset({
     "File:FilePermissions",
     # Windows "Mark of the Web" ADS — exiftool strips it when rewriting the file
     "File:ZoneIdentifier",
+    # Byte order exiftool writes when creating an EXIF IFD from scratch
+    "File:ExifByteOrder",
     # IPTC checksum exiftool recomputes whenever IPTC data changes
     "File:CurrentIPTCDigest",
     # XMP toolkit version stamp exiftool writes when it touches XMP
@@ -27,7 +29,20 @@ EXIFTOOL_AUTO_TAGS = frozenset({
     # IPTC record version/encoding exiftool may auto-set
     "IPTC:ApplicationRecordVersion",
     "IPTC:CodedCharacterSet",
+    # IPTC envelope version added when exiftool first writes IPTC to a file
+    "IPTC:EnvelopeRecordVersion",
+    # Warning exiftool emits when IPTC and XMP are out of sync in the source file
+    "ExifTool:Warning",
     "ExifTool:ExifToolVersion",
+    # Core EXIF fields exiftool initialises when creating an EXIF IFD from scratch
+    # (happens on files that had no EXIF block before the first write)
+    "EXIF:ExifVersion",
+    "EXIF:ColorSpace",
+    "EXIF:ComponentsConfiguration",
+    "EXIF:YCbCrPositioning",
+    # RAF: embedded preview size and raw-data byte offset shift on every write
+    "File:PreviewImage",
+    "RAF:StripOffsets",
 })
 
 
