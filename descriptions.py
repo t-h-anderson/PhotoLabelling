@@ -24,7 +24,7 @@ PROVENANCE_TAGS = ["XMP:CreatorTool", "XMP:MetadataDate",
                    "IPTC:Writer-Editor", "XMP-photoshop:CaptionWriter"]
 
 def load_descriptions() -> list[dict]:
-    with DESCRIPTIONS_FILE.open() as f:
+    with DESCRIPTIONS_FILE.open(encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
 def parse_keywords(description: str) -> list[str]:
