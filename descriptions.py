@@ -1,7 +1,8 @@
 import json
 import exiftool
+from datetime import datetime
 from pathlib import Path
-from config import OUTPUT_DIR
+from config import OUTPUT_DIR, MODEL
 from fix_dates import filesystem_date, DATE_TAGS, EXIF_DATE_FORMAT
 from integrity import hash_pixels, verify_write, backup_path
 
@@ -11,6 +12,11 @@ DESCRIPTIONS_FILE = OUTPUT_DIR / "descriptions.jsonl"
 # Lightroom, Windows Explorer etc.
 KEYWORD_TAGS = ["IPTC:Keywords", "XMP:Subject"]
 TITLE_TAGS = ["XMP:Title", "XMP:Description"]
+
+# Records which AI model generated the metadata and when it was written.
+# XMP:CreatorTool  — the tool/model that produced the content
+# XMP:MetadataDate — ISO 8601 timestamp of the write; standard XMP provenance field
+PROVENANCE_TAGS = ["XMP:CreatorTool", "XMP:MetadataDate"]
 
 def load_descriptions() -> list[dict]:
     with DESCRIPTIONS_FILE.open() as f:
@@ -44,6 +50,7 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 print(f"  Keywords: {keywords}")
                 if date_str:
                     print(f"  Date:     {date_str} (backfilled from filesystem)")
+                print(f"  Model:    PhotoLabelling/{MODEL}")
                 continue
 
             try:
@@ -54,6 +61,8 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 if date_str:
                     for tag in DATE_TAGS:
                         params[tag] = date_str
+                params["XMP:CreatorTool"] = f"PhotoLabelling/{MODEL}"
+                params["XMP:MetadataDate"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
                 before_pixels = hash_pixels(path)
                 et.set_tags(path, params)  # exiftool auto-creates .jpg_original backup
