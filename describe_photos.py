@@ -2,15 +2,16 @@ import ollama
 import json
 import time
 import io
+from datetime import datetime
 from PIL import Image, ImageFilter, ImageStat
 
-_client = ollama.Client(timeout=120)
+_client = ollama.Client(timeout=240)
 
 from pathlib import Path
 from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE, MAX_IMAGE_PX, SHARPNESS_BLUR_THRESHOLD, NUM_CTX
 from vocabulary import (
     load_vocabulary, save_vocabulary, load_blacklist,
-    update_vocabulary, build_prompt, scan_photos
+    update_vocabulary, build_prompt, scan_photos, event_from_path
 )
 from scrub_descriptions import scrub_keywords
 
@@ -120,7 +121,8 @@ def run_pipeline():
 
     with OUTPUT_FILE.open("a") as out, METRICS_FILE.open("a") as metrics_out:
         for i, photo in enumerate(photos):
-            prompt = build_prompt(vocabulary, blacklist, VOCABULARY_PROMPT_SIZE)
+            event = event_from_path(photo)
+            prompt = build_prompt(vocabulary, blacklist, VOCABULARY_PROMPT_SIZE, event=event)
             try:
                 print(f"[{i+1}/{len(photos)}] Processing {photo.name}...", end="\r")
                 raw_description, metrics = describe_photo(photo, prompt)
@@ -130,7 +132,15 @@ def run_pipeline():
                 _, focus_tag = _sharpness_tier(metrics["sharpness"])
                 keywords = f"{keywords}, {focus_tag}" if keywords else focus_tag
 
-                record = {"path": photo.as_posix(), "title": title, "caption": caption, "keywords": keywords, "rating": rating}
+                record = {
+                    "path": photo.as_posix(),
+                    "title": title,
+                    "caption": caption,
+                    "keywords": keywords,
+                    "rating": rating,
+                    "labelled_at": datetime.now().isoformat(timespec="seconds"),
+                    "folder_context": event,
+                }
                 out.write(json.dumps(record, ensure_ascii=False) + "\n")
                 out.flush()
 
