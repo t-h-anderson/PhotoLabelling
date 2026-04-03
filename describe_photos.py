@@ -2,7 +2,7 @@ import ollama
 import json
 import time
 
-_client = ollama.Client(timeout=120)
+_client = ollama.Client(timeout=240)
 
 from pathlib import Path
 from config import OUTPUT_DIR, MODEL, VOCABULARY_PROMPT_SIZE

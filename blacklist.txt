@@ -10,3 +10,6 @@ relaxed
 serene
 peaceful
 active
+exploration
+fun
+intimate
