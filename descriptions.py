@@ -1,6 +1,5 @@
 import json
 import exiftool
-from datetime import datetime
 from pathlib import Path
 from config import OUTPUT_DIR, MODEL
 from fix_dates import filesystem_date, DATE_TAGS, EXIF_DATE_FORMAT
@@ -13,9 +12,10 @@ DESCRIPTIONS_FILE = OUTPUT_DIR / "descriptions.jsonl"
 KEYWORD_TAGS = ["IPTC:Keywords", "XMP:Subject"]
 TITLE_TAGS = ["XMP:Title", "XMP:Description"]
 
-# Records which AI model generated the metadata and when it was written.
+# Records which AI model generated the metadata and when it was run.
 # XMP:CreatorTool  — the tool/model that produced the content
-# XMP:MetadataDate — ISO 8601 timestamp of the write; standard XMP provenance field
+# XMP:MetadataDate — ISO 8601 timestamp from descriptions.jsonl ("labelled_at");
+#                    represents when the model ran, not when tags were written
 PROVENANCE_TAGS = ["XMP:CreatorTool", "XMP:MetadataDate"]
 
 def load_descriptions() -> list[dict]:
@@ -51,6 +51,8 @@ def write_tags(records: list[dict], dry_run: bool = True):
                 if date_str:
                     print(f"  Date:     {date_str} (backfilled from filesystem)")
                 print(f"  Model:    PhotoLabelling/{MODEL}")
+                if labelled_at := record.get("labelled_at"):
+                    print(f"  Labelled: {labelled_at}")
                 continue
 
             try:
@@ -62,7 +64,8 @@ def write_tags(records: list[dict], dry_run: bool = True):
                     for tag in DATE_TAGS:
                         params[tag] = date_str
                 params["XMP:CreatorTool"] = f"PhotoLabelling/{MODEL}"
-                params["XMP:MetadataDate"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                if labelled_at := record.get("labelled_at"):
+                    params["XMP:MetadataDate"] = labelled_at
 
                 before_pixels = hash_pixels(path)
                 et.set_tags(path, params)  # exiftool auto-creates .jpg_original backup

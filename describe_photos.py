@@ -1,6 +1,7 @@
 import ollama
 import json
 import time
+from datetime import datetime
 
 _client = ollama.Client(timeout=240)
 
@@ -76,7 +77,8 @@ def run_pipeline():
                 title, keywords = parse_response(raw_description)
                 keywords = scrub_keywords(keywords, blacklist)
 
-                record = {"path": str(photo), "title": title, "keywords": keywords}
+                record = {"path": str(photo), "title": title, "keywords": keywords,
+                          "labelled_at": datetime.now().isoformat(timespec="seconds")}
                 out.write(json.dumps(record) + "\n")
                 out.flush()
 
