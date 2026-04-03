@@ -4,39 +4,18 @@ import time
 import urllib.request
 from pathlib import Path
 from collections import Counter
-from PIL import Image
+import exiftool
 from config import OUTPUT_DIR, PHOTO_DIR, EXTENSIONS
 
-_GPS_IFD_TAG = 34853  # EXIF tag for GPS sub-IFD
-
-
-def _dms_to_decimal(dms, ref: str) -> float:
-    degrees = float(dms[0])
-    minutes = float(dms[1]) / 60
-    seconds = float(dms[2]) / 3600
-    decimal = degrees + minutes + seconds
-    if ref in ("S", "W"):
-        decimal = -decimal
-    return round(decimal, 6)
-
-
-def extract_gps(image_path: Path) -> tuple[float, float] | None:
-    """Return (latitude, longitude) in decimal degrees from EXIF GPS data, or None."""
+def extract_gps(image_path: Path, et: exiftool.ExifToolHelper) -> tuple[float, float] | None:
+    """Return (latitude, longitude) in decimal degrees using exiftool, or None."""
     try:
-        with Image.open(image_path) as img:
-            exif = img.getexif()
-            if not exif:
-                return None
-            gps_ifd = exif.get_ifd(_GPS_IFD_TAG)
-            if not gps_ifd:
-                return None
-            lat_ref = gps_ifd.get(1)
-            lat = gps_ifd.get(2)
-            lon_ref = gps_ifd.get(3)
-            lon = gps_ifd.get(4)
-            if not all([lat_ref, lat, lon_ref, lon]):
-                return None
-            return _dms_to_decimal(lat, lat_ref), _dms_to_decimal(lon, lon_ref)
+        tags = et.get_metadata(str(image_path))[0]
+        lat = tags.get("Composite:GPSLatitude")
+        lon = tags.get("Composite:GPSLongitude")
+        if lat is not None and lon is not None:
+            return round(float(lat), 6), round(float(lon), 6)
+        return None
     except Exception:
         return None
 

@@ -2,6 +2,7 @@ import ollama
 import json
 import time
 import io
+import exiftool
 from datetime import datetime
 from PIL import Image, ImageFilter, ImageStat
 
@@ -120,10 +121,10 @@ def run_pipeline():
     vocabulary = load_vocabulary()
     blacklist = load_blacklist()
 
-    with OUTPUT_FILE.open("a") as out, METRICS_FILE.open("a") as metrics_out:
+    with exiftool.ExifToolHelper() as et, OUTPUT_FILE.open("a") as out, METRICS_FILE.open("a") as metrics_out:
         for i, photo in enumerate(photos):
             event = event_from_path(photo)
-            gps = extract_gps(photo)
+            gps = extract_gps(photo, et)
             location = reverse_geocode(*gps) if gps else None
             prompt = build_prompt(vocabulary, blacklist, VOCABULARY_PROMPT_SIZE, event=event, location=location)
             try:
