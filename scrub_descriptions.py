@@ -21,7 +21,7 @@ def scrub_descriptions():
     records = []
     scrubbed_count = 0
 
-    with OUTPUT_FILE.open() as f:
+    with OUTPUT_FILE.open(encoding="utf-8") as f:
         for line in f:
             if not line.strip():
                 continue
@@ -36,7 +36,7 @@ def scrub_descriptions():
 
     # write back atomically via a temp file to avoid corruption if interrupted
     temp_file = OUTPUT_FILE.with_suffix(".jsonl.tmp")
-    with temp_file.open("w") as f:
+    with temp_file.open("w", encoding="utf-8") as f:
         for record in records:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
     temp_file.replace(OUTPUT_FILE)
